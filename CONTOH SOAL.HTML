@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ujian Aman 100+ Siswa</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f7f6; user-select: none; }
+        .box { max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #exam-container { display: none; width: 100%; height: 100vh; position: fixed; top: 0; left: 0; z-index: 100; background: white; }
+        iframe { width: 100%; height: 100%; border: none; }
+        #warning-screen { display: none; color: white; background: #b00; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pt: 150px; z-index: 9999; cursor: pointer; }
+        input { padding: 12px; width: 80%; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; width: 85%; font-weight: bold; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div id="start-screen" class="box">
+        <h2>Ujian Sekolah</h2>
+        <p>Masukkan Nama Lengkap:</p>
+        <input type="text" id="student-name" placeholder="Nama Siswa..." required>
+        <button onclick="startExam()">MULAI UJIAN</button>
+    </div>
+
+    <div id="exam-container">
+        <!-- GANTI LINK GOOGLE FORM ANDA -->
+        <iframe id="exam-frame" src="https://forms.gle/xNv56gGsZZ6hWpmx6">Memuat...</iframe>
+    </div>
+
+    <div id="warning-screen">
+        <h1>AKSES TERKUNCI!</h1>
+        <p>Nama: <b id="display-name"></b></p>
+        <p>Terdeteksi curang (Pindah Tab/Keluar Layar Penuh).</p>
+        <p style="margin-top: 50px; font-size: 12px;">(Ketuk 5x untuk Reset Pengawas)</p>
+    </div>
+
+    <script>
+        let isExamStarted = false;
+        let tapCount = 0;
+        
+        // GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA
+        const reportUrl = "https://script.google.com/macros/s/AKfycbxq1iVzLXRMrIVpncolUpJotV-MuP7ZP_1F6ECDBIQFnvO0nTw8TLXgX7WYJPV75shb/exec"; 
+        const adminPass = "GURU123";
+
+        window.onload = function() {
+            if (localStorage.getItem("status") === "LOCKED") showLockScreen(localStorage.getItem("nama"));
+        };
+
+        function startExam() {
+            let name = document.getElementById('student-name').value.trim();
+            if (!name) return alert("Isi nama!");
+            localStorage.setItem("nama", name);
+            isExamStarted = true;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('exam-container').style.display = 'block';
+            let e = document.documentElement;
+            if (e.requestFullscreen) e.requestFullscreen();
+        }
+
+        function lock() {
+            if (!isExamStarted) return;
+            localStorage.setItem("status", "LOCKED");
+            showLockScreen(localStorage.getItem("nama"));
+            
+            // KIRIM DATA KE GOOGLE SHEETS
+            fetch(reportUrl, {
+                method: "POST",
+                mode: "no-cors", // Penting untuk Google Script
+                body: JSON.stringify({ Nama: localStorage.getItem("nama"), Pelanggaran: "Pindah Tab/Keluar Layar" })
+            });
+            isExamStarted = false;
+        }
+
+        function showLockScreen(n) {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('exam-container').innerHTML = "";
+            document.getElementById('display-name').innerText = n;
+            document.getElementById('warning-screen').style.display = 'block';
+        }
+
+        // DETEKSI PINDAH TAB & KELUAR FULLSCREEN
+        document.addEventListener("visibilitychange", () => { if (document.hidden) lock(); });
+        document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && isExamStarted) lock(); });
+
+        // RESET PENGAWAS (KETUK 5X)
+        document.getElementById('warning-screen').addEventListener('click', () => {
+            tapCount++;
+            if (tapCount === 5) {
+                if (prompt("Password:") === adminPass) {
+                    localStorage.clear();
+                    location.reload();
+                }
+                tapCount = 0;
+            }
+        });
+    </script>
+</body>
+</html>
